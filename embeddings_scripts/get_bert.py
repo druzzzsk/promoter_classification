@@ -5,15 +5,13 @@ import tqdm
 import json
 import os
 
-# 1. Загрузка данных
 df = pd.read_csv(r'C:\Users\User\PROJECTS\chem_ai_project\data\stong_weak_promoter.csv')
 
 unique_sequences = df['sequence'].unique()
 labels = df['label']
-# 2. Подключение к CUDA
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# 3. Загрузка модели и токенизатора
 with torch.no_grad():
     model = AutoModel.from_pretrained("zhihan1996/DNABERT-2-117M", trust_remote_code=True).to(device)
     tokenizer = AutoTokenizer.from_pretrained("zhihan1996/DNABERT-2-117M", trust_remote_code=True)
@@ -32,33 +30,29 @@ with torch.no_grad():
         hidden_states = outputs[0].squeeze(0)
 
         emb = torch.mean(hidden_states, dim=0)
-        emb = emb / emb.norm()  # Нормализация (опционально)
+        emb = emb / emb.norm()  
 
         results.append({
             "input": sequence,
             "embedding": emb.tolist()
         })
 
-# 4. Сохранение в JSON
 json_path = "gene_hyenadna.json"
 with open(json_path, 'w') as f:
     json.dump(results, f)
 
-# 5. Загрузка из JSON и преобразование в DataFrame
 with open(json_path, "r") as f:
     data = json.load(f)
 
-df = pd.json_normalize(data)  # Получим колонки 'input' и 'embedding'
+df = pd.json_normalize(data) 
 
-# 6. Разделение embedding на отдельные колонки
 embedding_df = pd.DataFrame(df["embedding"].tolist())
 embedding_df.columns = [f"emb_{i}" for i in range(embedding_df.shape[1])]
 
-# 7. Объединение с исходной последовательностью
 final_df = pd.concat([df["input"], embedding_df], axis=1)
 final_df = final_df.rename(columns={"input": "sequence"})
 final_df['label'] = labels
-# 8. Сохранение в CSV
+
 final_csv_path = "strong_weak_promoter_bert_embeds.csv"
 final_df.to_csv(final_csv_path, index=False)
 
