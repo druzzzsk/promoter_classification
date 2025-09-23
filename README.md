@@ -1,4 +1,4 @@
-# promoter_classification
+# Promoter classification
 
 ### Project description
 
